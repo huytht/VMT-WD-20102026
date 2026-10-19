@@ -361,12 +361,12 @@ class RomanticThreeScene {
                 group: butterflyGroup,
                 leftPivot: leftPivot,
                 rightPivot: rightPivot,
-                speed: 1.1 + Math.random() * 0.7,
-                flapSpeed: 14 + Math.random() * 6,
+                speed: 0.35 + Math.random() * 0.25,      // Slow, peaceful wave
+                flapSpeed: 4.2 + Math.random() * 1.6,    // Gentle, graceful butterfly flap
                 phase: Math.random() * Math.PI * 2,
                 orbitRadius: radius,
-                orbitSpeed: 0.22 + Math.random() * 0.28,
-                yAmplitude: 7 + Math.random() * 8,
+                orbitSpeed: 0.06 + Math.random() * 0.04, // Dreamy, slow orbit around heart
+                yAmplitude: 3.5 + Math.random() * 3.5,   // Soft vertical range
                 yOffset: butterflyGroup.position.y,
                 baseScale: scale
             });
@@ -458,28 +458,27 @@ class RomanticThreeScene {
 
         // 2. Butterfly flight paths & wing flapping
         this.butterflies.forEach((b) => {
-            // Authentic butterfly wing flap (V-fold up to 55 degrees)
-            const flap = Math.sin(time * b.flapSpeed + b.phase) * 0.88;
+            // Gentle, elegant butterfly wing flap (soft flutter)
+            const flap = Math.sin(time * b.flapSpeed + b.phase) * 0.65;
             b.rightPivot.rotation.y = flap;
             b.leftPivot.rotation.y = -flap;
 
-            // Flight trajectory: 3D Lissajous / spiral orbit with natural flutter bobbing
+            // Flight trajectory: 3D Lissajous orbit with gentle, silky-smooth drift
             const angle = time * b.orbitSpeed + b.phase;
-            const x = Math.sin(angle) * b.orbitRadius + Math.cos(angle * 2) * 5;
-            const z = Math.cos(angle) * (b.orbitRadius * 0.75) + Math.sin(time * 0.7) * 7;
-            const flapBob = Math.sin(time * b.flapSpeed + b.phase) * 0.45; // Downstroke lift
+            const x = Math.sin(angle) * b.orbitRadius + Math.cos(angle * 2) * 4;
+            const z = Math.cos(angle) * (b.orbitRadius * 0.75) + Math.sin(time * 0.3) * 5;
+            const flapBob = Math.sin(time * b.flapSpeed + b.phase) * 0.18; // Soft natural lift
             const y = b.yOffset + Math.sin(time * b.speed + b.phase) * b.yAmplitude + flapBob;
 
             // Update position
             const prevPos = b.group.position.clone();
             b.group.position.set(x, y, z);
 
-            // Look along flight direction (Head points along velocity)
+            // Smooth orientation with slerp (prevents abrupt jerky turns)
             const dir = b.group.position.clone().sub(prevPos).normalize();
-            if (dir.lengthSq() > 0.001) {
-                b.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-                // Banking roll into curves
-                b.group.rotateZ(Math.sin(time * 3 + b.phase) * 0.25);
+            if (dir.lengthSq() > 0.0001) {
+                const targetQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                b.group.quaternion.slerp(targetQuat, 0.08); // Silky smooth interpolation
             }
         });
 

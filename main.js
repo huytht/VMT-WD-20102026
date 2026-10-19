@@ -18,23 +18,40 @@ function initAudioPlayer() {
     const audio = document.getElementById('bg-music');
     const statusText = document.getElementById('music-status-text');
 
+    const unlockOverlay = document.getElementById('audio-unlock-overlay');
+    const unlockBtn = document.getElementById('unlock-btn');
+
     if (!audio || !musicBar) return;
 
     let isPlaying = false;
-    audio.volume = 0.7;
+    audio.volume = 0.75;
+
+    function onPlaySuccess() {
+        isPlaying = true;
+        musicBar.classList.add('playing');
+        if (statusText) statusText.textContent = 'Đang phát • Phương Mỹ Chi';
+        if (unlockOverlay) {
+            unlockOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                unlockOverlay.style.display = 'none';
+            }, 500);
+        }
+    }
 
     function playAudio() {
         const promise = audio.play();
         if (promise !== undefined) {
             promise.then(() => {
-                isPlaying = true;
-                musicBar.classList.add('playing');
-                if (statusText) statusText.textContent = 'Đang phát • Phương Mỹ Chi';
+                onPlaySuccess();
             }).catch((err) => {
-                console.log('Autoplay deferred by browser policy until first gesture:', err);
+                console.log('Autoplay deferred by browser policy. Showing interactive gift prompt:', err);
                 isPlaying = false;
                 musicBar.classList.remove('playing');
                 if (statusText) statusText.textContent = 'Phương Mỹ Chi • Chạm để nghe';
+                // Show the sweet romantic gift card to invite first touch
+                if (unlockOverlay && !isPlaying) {
+                    unlockOverlay.style.display = 'flex';
+                }
             });
         }
     }
@@ -63,14 +80,26 @@ function initAudioPlayer() {
         if (!isPlaying) playAudio();
     });
 
-    // 3. Fallback: on ANY first user gesture (touch, scroll, click, mouse move, key)
+    // 3. User gesture unlock (card click, button click, or any tap/scroll anywhere)
     const gestureEvents = ['pointerdown', 'touchstart', 'click', 'scroll', 'wheel', 'keydown'];
-    const unlockAndPlay = () => {
+    const unlockAndPlay = (e) => {
         if (!isPlaying) {
-            playAudio();
+            audio.play().then(() => {
+                onPlaySuccess();
+                if (e.target && (e.target.closest('#unlock-btn') || e.target.closest('#audio-unlock-overlay'))) {
+                    spawnHeartBurst(window.innerWidth / 2, window.innerHeight / 2, 30);
+                }
+            }).catch(() => {});
         }
         gestureEvents.forEach(evt => window.removeEventListener(evt, unlockAndPlay, { capture: true }));
     };
+
+    if (unlockBtn) {
+        unlockBtn.addEventListener('click', unlockAndPlay);
+    }
+    if (unlockOverlay) {
+        unlockOverlay.addEventListener('click', unlockAndPlay);
+    }
 
     gestureEvents.forEach(evt => {
         window.addEventListener(evt, unlockAndPlay, { capture: true, once: true });
