@@ -169,61 +169,182 @@ class RomanticThreeScene {
     }
 
     /**
-     * Create 3D Butterflies with flapping dual wings
+     * Creates procedural decorative texture for butterfly wings
+     */
+    createButterflyWingTexture(baseColorHex, edgeColorHex) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        // Radiant wing gradient
+        const grad = ctx.createRadialGradient(20, 120, 5, 128, 128, 140);
+        grad.addColorStop(0, '#fff5f8');
+        grad.addColorStop(0.35, baseColorHex);
+        grad.addColorStop(0.75, edgeColorHex);
+        grad.addColorStop(1, '#880e4f');
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Delicate organic wing veins (gân cánh bướm)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        // Vein 1: Forewing crest
+        ctx.moveTo(20, 128);
+        ctx.bezierCurveTo(90, 80, 170, 50, 235, 45);
+        // Vein 2: Forewing mid
+        ctx.moveTo(20, 128);
+        ctx.bezierCurveTo(100, 115, 180, 105, 245, 110);
+        // Vein 3: Hindwing upper
+        ctx.moveTo(20, 128);
+        ctx.bezierCurveTo(105, 145, 180, 160, 240, 175);
+        // Vein 4: Hindwing lower
+        ctx.moveTo(20, 128);
+        ctx.bezierCurveTo(90, 175, 160, 210, 220, 230);
+        ctx.stroke();
+
+        // Pearl dust dots along outer wing margin
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        for (let i = 0; i < 9; i++) {
+            const py = 35 + i * 22;
+            const px = 225 + Math.sin(i * 0.8) * 12;
+            ctx.beginPath();
+            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        return texture;
+    }
+
+    /**
+     * Create 3D Butterflies with authentic rounded 2-lobe wings and cute body
      */
     createButterflies(count) {
+        // Butterfly Wing Shape (Classic Forewing + Hindwing 2-lobe silhouette)
+        const wingShape = new THREE.Shape();
+        wingShape.moveTo(0, 0);
+
+        // 1. Forewing (Cánh trước to, cong tròn bồng bềnh vươn cao)
+        wingShape.bezierCurveTo(0.6, 1.5, 2.0, 3.4, 3.6, 3.4);
+        wingShape.bezierCurveTo(4.4, 3.4, 4.8, 2.3, 4.2, 1.2);
+        wingShape.bezierCurveTo(3.7, 0.5, 2.8, 0.2, 1.8, 0.1);
+
+        // 2. Hindwing (Cánh sau tròn bầu bĩnh ôm sát)
+        wingShape.bezierCurveTo(2.7, -0.3, 3.2, -1.6, 2.2, -2.3);
+        wingShape.bezierCurveTo(1.3, -2.6, 0.5, -1.9, 0.2, -0.7);
+        wingShape.bezierCurveTo(0.1, -0.3, 0.05, -0.1, 0, 0);
+
+        const wingGeom = new THREE.ShapeGeometry(wingShape, 16);
+
+        // Map UV coordinates smoothly across the shape
+        const pos = wingGeom.attributes.position;
+        const uvs = new Float32Array(pos.count * 2);
+        for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i);
+            const y = pos.getY(i);
+            // Normalize UV coordinates [0, 1]
+            uvs[i * 2] = (x + 0.5) / 5.2;
+            uvs[i * 2 + 1] = (y + 2.8) / 6.4;
+        }
+        wingGeom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
         for (let i = 0; i < count; i++) {
             const butterflyGroup = new THREE.Group();
 
-            // Wing shape geometry
-            const wingShape = new THREE.Shape();
-            wingShape.moveTo(0, 0);
-            wingShape.bezierCurveTo(1.5, 2.5, 3.5, 3.5, 4.0, 1.8);
-            wingShape.bezierCurveTo(4.5, 0.5, 3.5, -1.0, 2.0, -1.8);
-            wingShape.bezierCurveTo(1.0, -2.5, 0.2, -1.5, 0, 0);
+            const isPink = i % 2 === 0;
+            const wingTex = this.createButterflyWingTexture(
+                isPink ? '#ff85b3' : '#ffadc7',
+                isPink ? '#ff2a85' : '#e91e63'
+            );
 
-            const wingGeom = new THREE.ShapeGeometry(wingShape);
-
-            // Shimmering butterfly wing material
+            // Translucent glowing butterfly wing material
             const wingMat = new THREE.MeshStandardMaterial({
-                color: i % 2 === 0 ? 0xff6b9d : 0xff9ec7,
-                emissive: 0xff3377,
-                emissiveIntensity: 0.25,
+                map: wingTex,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.9,
-                roughness: 0.3,
-                metalness: 0.1
+                opacity: 0.94,
+                roughness: 0.2,
+                metalness: 0.1,
+                emissive: new THREE.Color(isPink ? 0xff4081 : 0xff69b4),
+                emissiveIntensity: 0.35,
+                depthWrite: false
             });
 
             // Right Wing
             const rightWing = new THREE.Mesh(wingGeom, wingMat);
-            rightWing.scale.set(0.7, 0.7, 0.7);
+            rightWing.scale.set(0.85, 0.85, 0.85);
 
             // Left Wing (Mirrored)
             const leftWing = new THREE.Mesh(wingGeom, wingMat);
-            leftWing.scale.set(-0.7, 0.7, 0.7);
+            leftWing.scale.set(-0.85, 0.85, 0.85);
 
-            // Wing pivot containers
+            // Wing pivot containers (pivot precisely along body axis)
             const rightPivot = new THREE.Group();
+            rightPivot.position.set(0.15, 0, 0);
             rightPivot.add(rightWing);
 
             const leftPivot = new THREE.Group();
+            leftPivot.position.set(-0.15, 0, 0);
             leftPivot.add(leftWing);
-
-            // Body
-            const bodyGeom = new THREE.CylinderGeometry(0.12, 0.08, 2.2, 8);
-            const bodyMat = new THREE.MeshBasicMaterial({ color: 0x5a1832 });
-            const body = new THREE.Mesh(bodyGeom, bodyMat);
-            body.rotation.x = Math.PI / 2;
 
             butterflyGroup.add(rightPivot);
             butterflyGroup.add(leftPivot);
-            butterflyGroup.add(body);
+
+            // Cute, short body (Thorax + Abdomen - NOT long dragonfly stick!)
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x4a0e2e,
+                roughness: 0.5,
+                metalness: 0.1
+            });
+
+            // Thorax (Thân ngực tròn)
+            const thoraxGeom = new THREE.SphereGeometry(0.22, 12, 12);
+            thoraxGeom.scale(0.8, 1.4, 0.8);
+            const thorax = new THREE.Mesh(thoraxGeom, bodyMat);
+            thorax.position.set(0, 0.2, 0);
+            butterflyGroup.add(thorax);
+
+            // Abdomen (Bụng bầu dục nhỏ xinh)
+            const abdomenGeom = new THREE.SphereGeometry(0.18, 12, 12);
+            abdomenGeom.scale(0.75, 1.8, 0.75);
+            const abdomen = new THREE.Mesh(abdomenGeom, bodyMat);
+            abdomen.position.set(0, -0.45, 0);
+            butterflyGroup.add(abdomen);
+
+            // Head (Đầu tròn nhỏ)
+            const headGeom = new THREE.SphereGeometry(0.15, 10, 10);
+            const head = new THREE.Mesh(headGeom, bodyMat);
+            head.position.set(0, 0.52, 0.05);
+            butterflyGroup.add(head);
+
+            // Two cute curved antennae (Râu bướm cong duyên dáng)
+            const antennaMat = new THREE.MeshBasicMaterial({ color: 0x2d081b });
+            const antennaCurve1 = new THREE.CubicBezierCurve3(
+                new THREE.Vector3(0.05, 0.6, 0.05),
+                new THREE.Vector3(0.2, 0.9, 0.1),
+                new THREE.Vector3(0.35, 1.1, 0.1),
+                new THREE.Vector3(0.45, 1.15, 0.15)
+            );
+            const antennaGeom1 = new THREE.TubeGeometry(antennaCurve1, 8, 0.02, 6, false);
+            butterflyGroup.add(new THREE.Mesh(antennaGeom1, antennaMat));
+
+            const antennaCurve2 = new THREE.CubicBezierCurve3(
+                new THREE.Vector3(-0.05, 0.6, 0.05),
+                new THREE.Vector3(-0.2, 0.9, 0.1),
+                new THREE.Vector3(-0.35, 1.1, 0.1),
+                new THREE.Vector3(-0.45, 1.15, 0.15)
+            );
+            const antennaGeom2 = new THREE.TubeGeometry(antennaCurve2, 8, 0.02, 6, false);
+            butterflyGroup.add(new THREE.Mesh(antennaGeom2, antennaMat));
 
             // Initial flight attributes
             const angle = (i / count) * Math.PI * 2;
-            const radius = 25 + Math.random() * 20;
+            const radius = 22 + Math.random() * 22;
 
             butterflyGroup.position.set(
                 Math.cos(angle) * radius,
@@ -231,7 +352,7 @@ class RomanticThreeScene {
                 (Math.random() - 0.5) * 25
             );
 
-            const scale = 0.65 + Math.random() * 0.45;
+            const scale = 0.85 + Math.random() * 0.45;
             butterflyGroup.scale.set(scale, scale, scale);
 
             this.scene.add(butterflyGroup);
@@ -240,12 +361,12 @@ class RomanticThreeScene {
                 group: butterflyGroup,
                 leftPivot: leftPivot,
                 rightPivot: rightPivot,
-                speed: 1.2 + Math.random() * 0.8,
-                flapSpeed: 16 + Math.random() * 8,
+                speed: 1.1 + Math.random() * 0.7,
+                flapSpeed: 14 + Math.random() * 6,
                 phase: Math.random() * Math.PI * 2,
                 orbitRadius: radius,
-                orbitSpeed: 0.25 + Math.random() * 0.3,
-                yAmplitude: 8 + Math.random() * 10,
+                orbitSpeed: 0.22 + Math.random() * 0.28,
+                yAmplitude: 7 + Math.random() * 8,
                 yOffset: butterflyGroup.position.y,
                 baseScale: scale
             });
@@ -337,27 +458,28 @@ class RomanticThreeScene {
 
         // 2. Butterfly flight paths & wing flapping
         this.butterflies.forEach((b) => {
-            // Wing flapping
-            const flap = Math.sin(time * b.flapSpeed + b.phase) * 0.75;
+            // Authentic butterfly wing flap (V-fold up to 55 degrees)
+            const flap = Math.sin(time * b.flapSpeed + b.phase) * 0.88;
             b.rightPivot.rotation.y = flap;
             b.leftPivot.rotation.y = -flap;
 
-            // Flight trajectory: 3D Lissajous / spiral orbit
+            // Flight trajectory: 3D Lissajous / spiral orbit with natural flutter bobbing
             const angle = time * b.orbitSpeed + b.phase;
-            const x = Math.sin(angle) * b.orbitRadius + Math.cos(angle * 2) * 6;
-            const z = Math.cos(angle) * (b.orbitRadius * 0.7) + Math.sin(time * 0.8) * 8;
-            const y = b.yOffset + Math.sin(time * b.speed + b.phase) * b.yAmplitude;
+            const x = Math.sin(angle) * b.orbitRadius + Math.cos(angle * 2) * 5;
+            const z = Math.cos(angle) * (b.orbitRadius * 0.75) + Math.sin(time * 0.7) * 7;
+            const flapBob = Math.sin(time * b.flapSpeed + b.phase) * 0.45; // Downstroke lift
+            const y = b.yOffset + Math.sin(time * b.speed + b.phase) * b.yAmplitude + flapBob;
 
             // Update position
             const prevPos = b.group.position.clone();
             b.group.position.set(x, y, z);
 
-            // Look along flight direction
+            // Look along flight direction (Head points along velocity)
             const dir = b.group.position.clone().sub(prevPos).normalize();
             if (dir.lengthSq() > 0.001) {
                 b.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-                // Banking roll
-                b.group.rotateZ(Math.sin(time * 4 + b.phase) * 0.3);
+                // Banking roll into curves
+                b.group.rotateZ(Math.sin(time * 3 + b.phase) * 0.25);
             }
         });
 

@@ -6,13 +6,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     initAudioPlayer();
     initPolaroidLightbox();
-    initVouchers();
     initHeartBlaster();
     initGlobalClickHearts();
 });
 
 /* =========================================================
-   1. AUDIO PLAYER CONTROLLER
+   1. AUDIO PLAYER CONTROLLER (AUTO RUN MUSIC)
    ========================================================= */
 function initAudioPlayer() {
     const musicBar = document.getElementById('music-toggle');
@@ -22,19 +21,22 @@ function initAudioPlayer() {
     if (!audio || !musicBar) return;
 
     let isPlaying = false;
-    audio.volume = 0.65;
+    audio.volume = 0.7;
 
     function playAudio() {
-        audio.play().then(() => {
-            isPlaying = true;
-            musicBar.classList.add('playing');
-            if (statusText) statusText.textContent = 'Đang phát • Phương Mỹ Chi';
-        }).catch((err) => {
-            console.log('Autoplay deferred until user interaction:', err);
-            isPlaying = false;
-            musicBar.classList.remove('playing');
-            if (statusText) statusText.textContent = 'Phương Mỹ Chi • Chạm để nghe';
-        });
+        const promise = audio.play();
+        if (promise !== undefined) {
+            promise.then(() => {
+                isPlaying = true;
+                musicBar.classList.add('playing');
+                if (statusText) statusText.textContent = 'Đang phát • Phương Mỹ Chi';
+            }).catch((err) => {
+                console.log('Autoplay deferred by browser policy until first gesture:', err);
+                isPlaying = false;
+                musicBar.classList.remove('playing');
+                if (statusText) statusText.textContent = 'Phương Mỹ Chi • Chạm để nghe';
+            });
+        }
     }
 
     function pauseAudio() {
@@ -53,17 +55,26 @@ function initAudioPlayer() {
         }
     });
 
-    // Auto-start on first user gesture anywhere on page if not already playing
-    const unlockAudio = () => {
+    // 1. Try to auto play immediately on load
+    playAudio();
+
+    // 2. Also try on window load
+    window.addEventListener('load', () => {
+        if (!isPlaying) playAudio();
+    });
+
+    // 3. Fallback: on ANY first user gesture (touch, scroll, click, mouse move, key)
+    const gestureEvents = ['pointerdown', 'touchstart', 'click', 'scroll', 'wheel', 'keydown'];
+    const unlockAndPlay = () => {
         if (!isPlaying) {
             playAudio();
         }
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
+        gestureEvents.forEach(evt => window.removeEventListener(evt, unlockAndPlay, { capture: true }));
     };
 
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
+    gestureEvents.forEach(evt => {
+        window.addEventListener(evt, unlockAndPlay, { capture: true, once: true });
+    });
 }
 
 /* =========================================================
@@ -122,29 +133,6 @@ function initPolaroidLightbox() {
         if (e.key === 'Escape' && modal.classList.contains('active')) {
             closeModal();
         }
-    });
-}
-
-/* =========================================================
-   3. 20/10 LOVE VOUCHERS REDEMPTION
-   ========================================================= */
-function initVouchers() {
-    const voucherButtons = document.querySelectorAll('.voucher-btn');
-
-    voucherButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const card = btn.closest('.voucher-card');
-            if (!card || card.classList.contains('redeemed')) return;
-
-            card.classList.add('redeemed');
-            btn.innerHTML = '<span>Đã nhận đặc quyền 💕</span>';
-
-            const rect = btn.getBoundingClientRect();
-            spawnHeartBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 20);
-
-            showLoveToast('Vợ đã nhận voucher thành công! Chồng sẽ thực hiện ngay nha 🥰');
-        });
     });
 }
 
@@ -244,7 +232,7 @@ function spawnHeartBurst(x, y, count = 15) {
 function initGlobalClickHearts() {
     document.addEventListener('click', (e) => {
         // Don't trigger if clicked on specific buttons that already burst
-        if (e.target.closest('#heart-blaster-btn') || e.target.closest('.voucher-btn')) return;
+        if (e.target.closest('#heart-blaster-btn')) return;
 
         const el = document.createElement('div');
         el.className = 'flying-heart-particle';
