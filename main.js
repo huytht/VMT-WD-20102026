@@ -28,12 +28,12 @@ function initAudioPlayer() {
         audio.play().then(() => {
             isPlaying = true;
             musicBar.classList.add('playing');
-            if (statusText) statusText.textContent = 'Đang phát giai điệu';
+            if (statusText) statusText.textContent = 'Đang phát • Phương Mỹ Chi';
         }).catch((err) => {
             console.log('Autoplay deferred until user interaction:', err);
             isPlaying = false;
             musicBar.classList.remove('playing');
-            if (statusText) statusText.textContent = 'Chạm để bật nhạc';
+            if (statusText) statusText.textContent = 'Phương Mỹ Chi • Chạm để nghe';
         });
     }
 
@@ -41,7 +41,7 @@ function initAudioPlayer() {
         audio.pause();
         isPlaying = false;
         musicBar.classList.remove('playing');
-        if (statusText) statusText.textContent = 'Tạm dừng';
+        if (statusText) statusText.textContent = 'Tạm dừng • Chạm để nghe';
     }
 
     musicBar.addEventListener('click', (e) => {
